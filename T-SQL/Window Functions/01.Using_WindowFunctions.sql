@@ -28,7 +28,7 @@ ROWS or RANGE
 
 
 UNBOUNDED PRECEDING
-  Defini o início da partição, quando estamos utilizando ROWS ou RANGE. UNBOUNDED PRECEDING pode ser utilizado APENAS no início do intervalo. 
+  Define o início da partição, quando estamos utilizando ROWS ou RANGE. UNBOUNDED PRECEDING pode ser utilizado APENAS no início do intervalo. 
   Podemos substituir UNBOUNDED por um valor, no qual identificará a linha de início baseado na linha atual. 
 
 CURRENT ROW 
@@ -239,12 +239,44 @@ WINDOW Win       AS (Ordenacao),
        Particao  AS (PARTITION BY ST.Name),
        Ordenacao AS (Particao ORDER BY SOH.OrderDate);
 
+/*
+Eliminar registros duplicados utilizando DENSE_RANK ou ROW_NUMBER
+*/
+CREATE TABLE #Duplicados
+(
+ Nome            NVARCHAR(255) NOT NULL
+,DataNascimento  DATE          NOT NULL
+,DataInclusao    DATETIME      NOT NULL DEFAULT GETDATE()
+)
 
+INSERT INTO #Duplicados 
+VALUES ('Allan Rodrigues', '1987-09-27', DEFAULT)
+GO
+WAITFOR DELAY '00:00:05' -- Criar uma diferença entre as datas de inclusão
+GO
+INSERT INTO #Duplicados 
+VALUES ('Allan Rodrigues', '1987-09-27', DEFAULT)
+GO
+WAITFOR DELAY '00:00:05'
+GO
+INSERT INTO #Duplicados 
+VALUES ('Allan Rodrigues', '1987-09-27', DEFAULT)
+GO
+INSERT INTO #Duplicados 
+VALUES ('João Gomes', '1990-07-15', DEFAULT)
+GO
+INSERT INTO #Duplicados 
+VALUES ('Ronaldo Cristiano', '1985-10-22', DEFAULT)
 
+--1 usando a função dense rank
+SELECT * FROM (
+SELECT *, DENSE_RANK() OVER Win AS Rnk FROM #Duplicados
+WINDOW Win AS (PARTITION BY Nome ORDER BY DataInclusao DESC)) AS T
+WHERE Rnk = 1
 
-
-
-
-
-
+--2nd usando a função row_number
+SELECT * FROM (
+SELECT *, ROW_NUMBER() OVER Win AS Id FROM #Duplicados
+WINDOW Win AS (PARTITION BY Nome ORDER BY DataInclusao DESC)) AS T
+WHERE Id = 1
 
